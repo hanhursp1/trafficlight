@@ -1,19 +1,31 @@
 import picostdlib/[time]
-import std/[lists, macros]
+import std/[lists]
+
+#### Tasks!
+##
+## A simple means of implementing cooperative multitasking
+## Tasks can yield and return based on a number of conditions,
+## such as after a set delay, or after the conclusion of another task
+
 
 #### Task Base
 type
+  TaskIterator* = iterator(): TaskYield
+
   TaskYieldObj = object of RootObj
   TaskYield* = ref TaskYieldObj
 
   TaskObj = object
-    currentTask*: iterator(): TaskYield
+    currentTask*: TaskIterator
     lastYield*: TaskYield
   Task = ref TaskObj
 
 ## TaskYield base methods
 method ready*(this: TaskYield): bool {.base.} =
   true
+
+proc yieldNext*(): TaskYield =
+  result.new()
 
 ## Task base functions
 proc finished*(this: var Task): bool =
@@ -31,6 +43,10 @@ proc ready*(this: var Task): bool =
 proc run*(this: var Task) =
   if this.ready() and not this.finished():
     this.lastYield = this.currentTask()
+
+proc delete*(this: var Task) =
+  this.currentTask = nil
+  this.lastYield = nil
 
 #### Types of yields
 
@@ -61,7 +77,7 @@ type
   TaskYieldTask* = ref TaskYieldTaskObj
 
 method ready*(this: TaskYieldTask): bool =
-  this.task.ready()
+  this.task.finished()
 
 proc yieldTask*(task: Task): TaskYieldTask =
   result.new()
@@ -81,5 +97,19 @@ proc run*(this: var TaskPool) =
     if node.value.ready():
       node.value.run()
 
-macro task*(def: untyped, body: untyped): untyped =
-  echo treeRepr(def)
+proc add*(this: var TaskPool, task: Task) =
+  this.tasks.add(task)
+
+var defaultTaskPool: TaskPool
+
+proc addTask*(task: TaskIterator): Task =
+  result.new()
+  result.currentTask = task
+  result.lastYield = yieldNext()
+  defaultTaskPool.add(result)
+
+proc addTask*(task: Task) =
+  defaultTaskPool.add(task)
+
+proc runTasks*() =
+  defaultTaskPool.run()
