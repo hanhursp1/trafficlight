@@ -15,10 +15,10 @@ type
   TaskYieldObj = object of RootObj
   TaskYield* = ref TaskYieldObj
 
-  TaskObj = object
+  TaskObj = object of RootObj
     currentTask*: TaskIterator
     lastYield*: TaskYield
-  Task = ref TaskObj
+  Task* = ref TaskObj
 
 ## TaskYield base methods
 method ready*(this: TaskYield): bool {.base.} =
@@ -53,22 +53,19 @@ proc delete*(this: var Task) =
 ## TaskYieldTime, yields for at least `delay` microseconds
 type
   TaskYieldTimeObj = object of TaskYield
-    timeStart*:   uint64
+    endTime*:   uint64
     delay*:       uint64
   TaskYieldTime* = ref TaskYieldTimeObj
 
 method ready*(this: TaskYieldTime): bool =
-  (timeUs64() - this.timeStart) > this.delay
+  this.endTime <= timeUs64()
 
 proc yieldTimeUS*(delay: uint64): TaskYieldTime =
   result.new()
-  result.timeStart = timeUs64()
-  result.delay = delay
+  result.endTime = timeUs64() + delay
 
 proc yieldTimeMS*(delay: uint64): TaskYieldTime =
-  result.new()
-  result.timeStart = timeUs64()
-  result.delay = delay * 1000
+  yieldTimeUS(delay * 1000)
 
 ## TaskYieldTask, yields until another task is finished
 type
@@ -82,6 +79,19 @@ method ready*(this: TaskYieldTask): bool =
 proc yieldTask*(task: Task): TaskYieldTask =
   result.new()
   result.task = task
+
+## TaskYieldCondition, yields when a callback function returns true
+type
+  TaskYieldConditionObj = object of TaskYield
+    callback*: proc(): bool
+  TaskYieldCondition* = ref TaskYieldConditionObj
+
+method ready*(this: TaskYieldCondition): bool =
+  this.callback()
+
+proc yieldCallback*(callback: proc(): bool): TaskYieldCondition =
+  result.new()
+  result.callback = callback
 
 #### Task Scheduler
 ## Really simple, just iterate over all tasks and check if they're ready or finished
@@ -102,7 +112,7 @@ proc add*(this: var TaskPool, task: Task) =
 
 var defaultTaskPool: TaskPool
 
-proc addTask*(task: TaskIterator): Task =
+proc addTask*(task: TaskIterator): Task {.discardable.} =
   result.new()
   result.currentTask = task
   result.lastYield = yieldNext()
