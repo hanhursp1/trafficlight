@@ -1,9 +1,9 @@
 import picostdlib/[time]
 import std/[lists]
 
-#### Fibers!
+#### Fibers! (technically not actually, they're really coroutines)
 ##
-## A simple means of implementing cooperative multiFibering
+## A simple means of implementing cooperative multitasking.
 ## Fibers can yield and return based on a number of conditions,
 ## such as after a set delay, or after the conclusion of another Fiber
 
