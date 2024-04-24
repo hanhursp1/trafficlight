@@ -13,9 +13,9 @@ const SEGMENT_LOOKUP* = [
   0b01101111        # 9
 ]
 
-proc getSegments*[L: static int](num: SomeUnsignedInt): array[L, byte] =
+proc getSegments*(num: SomeUnsignedInt, L: static[int]): array[L, byte] =
   ## Splits up `i` into an `L` length array of segments
   var num = num   # Shadow the input to make it mutable
   for i in 0..<L:
-    result[i] = SEGMENT_LOOKUP[num mod 10]
+    result[i] = byte(SEGMENT_LOOKUP[num mod 10])
     num = num div 10
