@@ -1,14 +1,13 @@
 import picostdlib/[gpio, time]
 import std/[strformat]
 import async/[fibers]
-import io/[register, sevenseg]
+import io/[register, sevenseg, lcd]
 
 
 type
   TrafficLights = enum
     nsGreen, nsYellow, nsRed,
     ewGreen, ewYellow, ewRed
-  TrafficState = set[TrafficLights]
   SevenSegState = object
     register: ShiftRegister
     currentValue: uint
@@ -44,6 +43,7 @@ var segState = SevenSegState(
   currentValue: 0
 )
 proc sevenSegDaemon(): FiberIterator =
+  segState.register.init()
   iterator(): FiberYield =
     while true:
       let vals = getSegments(segState.currentValue, 2)
@@ -58,12 +58,37 @@ proc sevenSegInc(): FiberIterator =
       yield yieldTimeMS(1000)
       segState.currentValue.inc
 
+proc lcdtest(): FiberIterator =
+  var lcd = LCDisplay(
+    register: ShiftRegister(
+      input: Gpio(2), serial_clk: Gpio(3), out_buffer_clk: Gpio(6)
+    ),
+    enablePin: Gpio(7)
+  )
+  lcd.init()
+  iterator(): FiberYield =
+    while true:
+      result = yieldTimeMS(2000)
+      lcd.write("Hello!")
+      yield result
+      result = yieldTimeMS(2000)
+      lcd.clear()
+      yield result
+      # lcd.clear()
+      # lcd.writeLine("Hello!", LCDLine.LineOne)
+      # yield result
+      # result = yieldTimeMS(2000)
+      # lcd.clear()
+      # lcd.writeLine("World!", LCDLine.LineTwo)
+      # yield result
+
+
 proc main() =
-  ## Initialize pins
-  segState.register.init()
+  ## Main function
   addFiber(sevenSegDaemon())
   addFiber(newUrbanTrafficLightTest())
   addFiber(sevenSegInc())
+  addFiber(lcdtest())
   # addFiber(newMemInfo())
   while true:
     runFibers()
