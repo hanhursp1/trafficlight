@@ -85,13 +85,13 @@ proc init*(this: var LCDisplay) =
   this.enablePin.setDir(Out)
 
   # Wake up the LCD
-  sleep(20)
+  sleep(50)
   this.nibbleWrite(0x03, 0)
-  sleep(5)
-  this.nibbleWrite(0x03, 0)
-  sleep(1)
-  this.nibbleWrite(0x03, 0)
-  sleep(1)
+  # sleep(5)
+  # this.nibbleWrite(0x03, 0)
+  # sleep(1)
+  # this.nibbleWrite(0x03, 0)
+  # sleep(1)
 
   # Initialize 4-bit data mode (Copied from C version)
   this.nibbleWrite(0x02, 0)
