@@ -32,6 +32,8 @@ target_include_directories(trafficlight PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 include(${Imports}) # Include our generated file
 link_imported_libs(trafficlight) # call our generated function to import all libs we're using
 
+target_link_libraries(hardware_flash)
+
 # enable usb output, disable uart output
 pico_enable_stdio_usb(trafficlight 1)
 pico_enable_stdio_uart(trafficlight 0)

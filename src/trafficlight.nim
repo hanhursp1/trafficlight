@@ -39,16 +39,6 @@ proc newUrbanTrafficLightTest(): FiberIterator =
       sr.output = cast[byte]({nsRed, ewYellow})
       yield yieldTimeMS(2000)
 
-proc ledtest(): FiberIterator =
-  var sr = ShiftRegister(input: Gpio(2), serial_clk: Gpio(3), out_buffer_clk: Gpio(5))
-  sr.init()
-
-  iterator(): FiberYield =
-    while true:
-      for i in 0..9:
-        sr.output = byte(SEGMENT_LOOKUP[i])
-        yield yieldTimeMS(1000)
-
 var segState = SevenSegState(
   register: ShiftRegister(input: Gpio(2), serial_clk: Gpio(3), out_buffer_clk: Gpio(5)),
   currentValue: 0
@@ -65,8 +55,8 @@ proc sevenSegDaemon(): FiberIterator =
 proc sevenSegInc(): FiberIterator =
   iterator(): FiberYield =
     while true:
-      segState.currentValue.inc
       yield yieldTimeMS(1000)
+      segState.currentValue.inc
 
 proc main() =
   ## Initialize pins
