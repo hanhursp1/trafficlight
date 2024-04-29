@@ -1,7 +1,8 @@
-import picostdlib/[gpio, time]
-import std/[strformat]
-import async/[fibers]
-import io/[register, sevenseg, lcd]
+import 
+  picostdlib/[gpio, time, stdio],
+  std/[strformat],
+  async/[fibers],
+  io/[register, sevenseg, lcd]
 
 
 type
@@ -63,24 +64,24 @@ proc lcdtest(): FiberIterator =
     register: ShiftRegister(
       input: Gpio(2), serial_clk: Gpio(3), out_buffer_clk: Gpio(6)
     ),
-    enablePin: Gpio(7)
+    enablePin: Gpio(7),
+    settings: LCDSettings(
+      cursor: false,
+      blinking: false
+    )
   )
   lcd.init()
   iterator(): FiberYield =
     while true:
-      result = yieldTimeMS(2000)
-      lcd.write("Hello!")
-      yield result
-      result = yieldTimeMS(2000)
+      result = yieldTimeMS(1000)
       lcd.clear()
+      lcd.writeLine("Hello!", LCDLine.LineOne)
       yield result
-      # lcd.clear()
-      # lcd.writeLine("Hello!", LCDLine.LineOne)
-      # yield result
-      # result = yieldTimeMS(2000)
-      # lcd.clear()
-      # lcd.writeLine("World!", LCDLine.LineTwo)
-      # yield result
+      result = yieldTimeMS(1000)
+      lcd.clear()
+      lcd.writeLine("World!", LCDLine.LineTwo)
+      yield result
+      
 
 
 proc main() =
@@ -94,4 +95,10 @@ proc main() =
     runFibers()
 
 when isMainModule:
-  main()
+  stdioInitAll()
+  sleep(100)
+  try:
+    main()
+  except Exception as e:
+    echo "An exception occurred: "
+    echo e[]

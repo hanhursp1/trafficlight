@@ -1,7 +1,6 @@
 import
   picostdlib/[gpio, time],
   register
-
 #### Commands ####
 
 type
@@ -17,7 +16,7 @@ template EMSET*(I_D, SH: bool): Command =
 template DISMODE*(D, C, B: bool): Command =
   ## Set the display, cursor, and blinking on/off
   Command(0x08 or (D.ord.shl 2) or (C.ord.shl 1) or B.ord)
-template CDS*(S_C, N, F: bool): Command =
+template CDS*(S_C, R_L: bool): Command =
   ## Set cursor moving and display shift
   Command(0x10 or (S_C.ord.shl 3) or (R_L.ord.shl 2))
 template FSET*(DL, N, F: bool): Command =
@@ -53,6 +52,9 @@ type
   LCDisplay* = object
     register*: ShiftRegister
     enablePin*: Gpio
+    settings*: LCDSettings
+  LCDSettings* = object
+    cursor*, blinking*: bool
   LCDLine* {.pure.} = enum
     LineOne, LineTwo
 
@@ -80,6 +82,7 @@ proc run*(this: var LCDisplay, commands: openArray[Command]) =
     this.commandWrite(c)
 
 proc init*(this: var LCDisplay) =
+  echo "Initializing LCD..."
   this.register.init()
   this.enablePin.init()
   this.enablePin.setDir(Out)
@@ -87,20 +90,20 @@ proc init*(this: var LCDisplay) =
   # Wake up the LCD
   sleep(50)
   this.nibbleWrite(0x03, 0)
-  # sleep(5)
-  # this.nibbleWrite(0x03, 0)
-  # sleep(1)
-  # this.nibbleWrite(0x03, 0)
-  # sleep(1)
+  sleep(5)
+  this.nibbleWrite(0x03, 0)
+  sleep(1)
+  this.nibbleWrite(0x03, 0)
+  sleep(1)
 
   # Initialize 4-bit data mode (Copied from C version)
   this.nibbleWrite(0x02, 0)
   sleep(1)
   this.run([
     FSET(false, true, false),
-    EMSET(true, true),
+    EMSET(true, false),
     CLR,
-    DISMODE(true, true, true)
+    DISMODE(true, this.settings.cursor, this.settings.blinking)
   ])
 
 proc clear*(this: var LCDisplay) {.inline.} =
