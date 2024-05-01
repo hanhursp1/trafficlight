@@ -29,11 +29,11 @@ proc lcdtest(): FiberIterator =
     while true:
       result = yieldTimeMS(1000)
       lcd.clear()
-      lcd.writeLine("Hello!", LCDLine.LineOne)
+      lcd[1] = "Hello!"
       yield result
       result = yieldTimeMS(1000)
       lcd.clear()
-      lcd.writeLine("World!", LCDLine.LineTwo)
+      lcd[1] = "World!"
       yield result
       
 proc main() =

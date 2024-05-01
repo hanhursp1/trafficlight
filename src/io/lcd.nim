@@ -120,3 +120,6 @@ proc writeLine*(this: var LCDisplay, output: string, line = LCDLine.LineOne) =
   of LCDLine.LineTwo:
     this.commandWrite(SETDDR(0x40))
   this.write(output)
+
+proc `[]=`*(this: var LCDisplay, idx: range[0..1], val: string) =
+  this.writeLine(val, LCDLine(idx))
