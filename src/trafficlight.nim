@@ -5,13 +5,13 @@ import
   io/[register, lcd, input],
   sevenseg, light
 
-var count: uint = 0
-proc sevenSegInc(): FiberIterator =
-  iterator(): FiberYield =
-    while true:
-      yield yieldTimeMS(1000)
-      count.inc
-      setSevenSegValue(count)
+# var count: uint = 0
+# proc sevenSegInc(): FiberIterator =
+#   iterator(): FiberYield =
+#     while true:
+#       yield yieldTimeMS(1000)
+#       count.inc
+#       setSevenSegValue(count)
 
 proc lcdtest(): FiberIterator =
   var lcd = LCDisplay(
@@ -40,7 +40,8 @@ proc main() =
   ## Main function
   addFiber(sevenSegDaemon())
   addFiber(newUrbanTrafficLightTest())
-  addFiber(sevenSegInc())
+  # addFiber(sevenSegInc())
+  # addFiber(new)
   addFiber(lcdtest())
   # addFiber(newMemInfo())
   while true:

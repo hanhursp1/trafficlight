@@ -64,6 +64,9 @@ type
   FiberYieldUntilPressedObj = object of FiberYield
     pin*: Gpio
   FiberYieldUntilPressed* = ref FiberYieldUntilPressedObj
+  FiberYieldUntilHoldObj = object of FiberYield
+    pin*: Gpio
+  FiberYieldUntilHold* = ref FiberYieldUntilHoldObj
   ## these types are starting to suffer from Java syndrome
   ## `FiberYieldUntilPressedAnyObjFactoryTemplateIterator`
   FiberYieldUntilPressedAnyObj = object of FiberYield
@@ -73,10 +76,17 @@ type
 method ready*(this: FiberYieldUntilPressed): bool =
   this.pin.isPressed()
 
+method ready*(this: FiberYieldUntilHold): bool =
+  this.pin.isHeld()
+
 method ready*(this: FiberYieldUntilPressedAny): bool =
   (this.pins * pressed) != {}
 
 proc yieldUntilPressed*(pin: Gpio): FiberYieldUntilPressed =
+  result.new()
+  result.pin = pin
+
+proc yieldUntilHeld*(pin: Gpio): FiberYieldUntilHold =
   result.new()
   result.pin = pin
 
