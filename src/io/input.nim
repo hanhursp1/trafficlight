@@ -5,6 +5,8 @@ import
 
 #### Special input handling API for specific pins
 ## Makes heavy use of bitsets
+## I implemented this just for 3 buttons lmao.
+## But it's modular, and it's here in case I need it
 
 var
   watch: set[Gpio]
