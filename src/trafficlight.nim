@@ -2,7 +2,7 @@ import
   picostdlib/[gpio, time, stdio],
   std/[strformat],
   async/[fibers],
-  io/[register, sevenseg, lcd]
+  io/[register, sevenseg, lcd, input]
 
 
 type
@@ -92,6 +92,7 @@ proc main() =
   addFiber(lcdtest())
   # addFiber(newMemInfo())
   while true:
+    checkInputs()
     runFibers()
 
 when isMainModule:
