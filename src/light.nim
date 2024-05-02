@@ -2,7 +2,7 @@ import
   std/[options],
   picostdlib/[gpio],
   async/[fibers],
-  io/[register],
+  io/[register, input, irq],
   sevenseg
 
 type
@@ -25,7 +25,7 @@ type
     next: uint
 
 let
-  urbanFSM = [
+  urbanFSM = @[
     LightNode(
       lights: {nsGreen, ewRed},
       delay: 5000,
@@ -49,7 +49,7 @@ let
       next: 0
     )
   ]
-  ruralFSM = [
+  ruralFSM = @[
     LightNode(
       lights: {nsGreen, ewRed},
       delay: 5000,
@@ -78,21 +78,34 @@ proc newCrosswalk*(count: SomeUnsignedInt): FiberIterator =
   iterator(): FiberYield =
     for i in countdown(count, 0):
       setSevenSegValue(i.uint)
-      yield yieldTimeMS(1000)
+      yield waitMS(1000)
 
 var cross = false
+var fsm = addr urbanFSM
 
+proc newTrafficLight*(): FiberIterator =
+  addInput(Gpio(14))
+  addInput(Gpio(15))
 
-proc newUrbanTrafficLightTest*(): FiberIterator =
   let crosswalkButton = Gpio(13)
+  let modeToggle = Gpio(10)
 
-  # Initialize crosswalk button irq
+  # Initialize crosswalk and mode toggle button irq
   crosswalkButton.init()
   crosswalkButton.setDir(In)
   crosswalkButton.pullUp()
-  crosswalkButton.enableIrqWithCallback({IrqLevel.fall}, true) do(gpio: Gpio, evt: set[IrqLevel]) {.cdecl.}:
+  crosswalkButton.registerIrq({IrqLevel.fall}) do():
     cross = true
 
+  modeToggle.init()
+  modeToggle.setDir(In)
+  modeToggle.pullUp()
+  modeToggle.registerIrq({IrqLevel.fall}) do():
+    echo "Switching mode!"
+    if fsm == (addr urbanFSM):
+      fsm = addr ruralFSM
+    else:
+      fsm = addr urbanFSM
 
   var sr = ShiftRegister(input: Gpio(2), serial_clk: Gpio(3), out_buffer_clk: Gpio(4))
   sr.init()
@@ -101,10 +114,13 @@ proc newUrbanTrafficLightTest*(): FiberIterator =
 
   iterator(): FiberYield =
     while true:
-      sr.output = cast[byte](urbanFSM[state].lights)
-      yield yieldTimeMS(urbanFSM[state].delay)
-      if urbanFSM[state].crosswalkEnabled and cross:
+      sr.output = cast[byte](fsm[][state].lights)
+      yield waitMS(fsm[][state].delay)
+      if fsm[][state].crosswalkEnabled and cross:
         sr.output = cast[byte]({nsRed, ewRed})
-        yield yieldFiber(addFiber(newCrosswalk(15)))
+        yield waitFiber(addFiber(newCrosswalk(15)))
         cross = false
-      state = urbanFSM[state].next
+      if fsm[][state].holdUntil.isSome():
+        let pin = fsm[][state].holdUntil.unsafeGet()
+        yield untilHeld(pin)
+      state = fsm[][state].next

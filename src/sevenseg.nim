@@ -35,6 +35,6 @@ proc sevenSegDaemon*(): FiberIterator =
     while true:
       let vals = getSegments(currentValue, 2)
       reg.output = vals[0]
-      yield yieldTimeUS(200)
+      yield waitUS(200)
       reg.output = vals[1] or 0b10000000    # Second display
-      yield yieldTimeUS(200)
+      yield waitUS(200)

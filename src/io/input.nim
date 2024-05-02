@@ -82,14 +82,14 @@ method ready*(this: FiberYieldUntilHold): bool =
 method ready*(this: FiberYieldUntilPressedAny): bool =
   (this.pins * pressed) != {}
 
-proc yieldUntilPressed*(pin: Gpio): FiberYieldUntilPressed =
+proc untilPressed*(pin: Gpio): FiberYieldUntilPressed =
   result.new()
   result.pin = pin
 
-proc yieldUntilHeld*(pin: Gpio): FiberYieldUntilHold =
+proc untilHeld*(pin: Gpio): FiberYieldUntilHold =
   result.new()
   result.pin = pin
 
-proc yieldUntilAnyPressed*(pins: set[Gpio]): FiberYieldUntilPressedAny =
+proc untilAnyPressed*(pins: set[Gpio]): FiberYieldUntilPressedAny =
   result.new()
   result.pins = pins

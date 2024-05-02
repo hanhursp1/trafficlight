@@ -24,7 +24,7 @@ type
 method ready*(this: FiberYield): bool {.base.} =
   true
 
-proc yieldNext*(): FiberYield =
+proc next*(): FiberYield =
   result.new()
 
 ## Fiber base functions
@@ -60,12 +60,12 @@ type
 method ready*(this: FiberYieldTime): bool =
   this.endTime <= timeUs64()
 
-proc yieldTimeUS*(delay: uint64): FiberYieldTime =
+proc waitUS*(delay: uint64): FiberYieldTime =
   result.new()
   result.endTime = timeUs64() + delay
 
-proc yieldTimeMS*(delay: uint64): FiberYieldTime =
-  yieldTimeUS(delay * 1000)
+proc waitMS*(delay: uint64): FiberYieldTime =
+  waitUS(delay * 1000)
 
 ## FiberYieldFiber, yields until another Fiber is finished
 type
@@ -76,7 +76,7 @@ type
 method ready*(this: FiberYieldFiber): bool =
   this.Fiber.finished()
 
-proc yieldFiber*(Fiber: Fiber): FiberYieldFiber =
+proc waitFiber*(Fiber: Fiber): FiberYieldFiber =
   result.new()
   result.Fiber = Fiber
 
@@ -89,9 +89,22 @@ type
 method ready*(this: FiberYieldCondition): bool =
   this.callback()
 
-proc yieldCallback*(callback: proc(): bool): FiberYieldCondition =
+proc waitCallback*(callback: proc(): bool): FiberYieldCondition =
   result.new()
   result.callback = callback
+
+type
+  FiberYieldOrObj = object of FiberYield
+    yieldA, yieldB: FiberYield
+  FiberYieldOr* = ref FiberYieldOrObj
+
+method ready*(this: FiberYieldOr): bool =
+  this.yieldA.ready() or this.yieldB.ready()
+
+proc `or`*(l, r: FiberYield): FiberYieldOr =
+  result.new()
+  result.yieldA = l
+  result.yieldB = r
 
 #### Fiber Scheduler
 ## Really simple, just iterate over all Fibers and check if they're ready or finished
@@ -115,7 +128,7 @@ var defaultFiberPool: FiberPool
 proc addFiber*(Fiber: FiberIterator): Fiber {.discardable.} =
   result.new()
   result.currentFiber = Fiber
-  result.lastYield = yieldNext()
+  result.lastYield = next()
   defaultFiberPool.add(result)
 
 proc addFiber*(Fiber: Fiber) =
