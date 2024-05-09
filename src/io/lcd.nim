@@ -4,7 +4,7 @@ import
 
 const
   LCD_WIDTH = 16
-  CUSTOM_CHARS = [1, 2]
+  CUSTOM_CHARS = [1, 2, 3, 4]
   CUSTOM_CHAR_DATA = block:
     # Read in all .char files at compile time
     var res: array[CUSTOM_CHARS.len(), array[8, byte]]

@@ -6,38 +6,16 @@ import
   io/[register, lcd, input, irq],
   sevenseg, light, lcdmenu
 
-# var count: uint = 0
-# proc sevenSegInc(): FiberIterator =
-#   iterator(): FiberYield =
-#     while true:
-#       yield waitMS(1000)
-#       count.inc
-#       setSevenSegValue(count)
-
 proc lcdtest(): FiberIterator =
   LCD.init()
-  iterator(): FiberYield =
-    while true:
-      result = waitMS(1000)
-      LCD.clear()
-      LCD[0] = "\x01"
-      yield result
-      result = waitMS(1000)
-      LCD.clear()
-      LCD[0] = "\x02"
-      yield result
-
-proc inputtest(): FiberIterator =
-  DefaultLedPin.init()
-  DefaultLedPin.setDir(Out)
   listenForInput(Gpio(12))
   iterator(): FiberYield =
     while true:
-      yield untilPressed(Gpio(12))
-      DefaultLedPin.put(High)
-      yield waitMS(500) or untilPressed(Gpio(12))
-      DefaultLedPin.put(Low)
-      
+      for c in '\x00'..'\xFF':
+        LCD.clear()
+        let b = c.byte
+        LCD[0] = fmt"{b:#02X} : {c}"
+        yield untilPressed(Gpio(12))
 
 proc memstats(): FiberIterator =
   iterator(): FiberYield =
@@ -54,14 +32,33 @@ proc termTest(): FiberIterator =
         echo fmt"{i}: {i.ord}"
       yield waitMS(1000)
 
+proc blinkTest(): FiberIterator =
+  DefaultLedPin.init()
+  DefaultLedPin.setDir(Out)
+  iterator(): FiberYield =
+    for i in 0..4:
+      DefaultLedPin.put(High)
+      yield waitMS(200)
+      DefaultLedPin.put(Low)
+      yield waitMS(200)
+
 proc main() =
   ## Main function
   addFiber(sevenSegDaemon())
   addFiber(newTrafficLight())
-  addFiber(lcdtest())
-  addFiber(inputtest())
+  # addFiber(addMenuHandler())
+  # addFiber(inputtest())
   # addFiber(termTest())
+  addFiber(lcdtest())
   addFiber(memstats())
+
+  addMainMenu(MenuEntry(
+    label: "Blink LED",
+    kind: FunctionCall,
+    callback: proc() =
+      addFiber(blinkTest())
+  ))
+
   while true:
     checkInputs()
     runFibers()

@@ -7,7 +7,7 @@ for i in range(8):
   if not os.path.isfile(path + ".png"):
     continue
 
-  print("Compiling character file: ", path + ".char")
+  print("Compiling character file:", path + ".char")
 
   im : Image.Image = Image.open(path + ".png").convert('1', None, Image.Dither.NONE)
 

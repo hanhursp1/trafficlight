@@ -26,52 +26,16 @@ type
 
 let
   urbanFSM = @[
-    LightNode(
-      lights: {nsGreen, ewRed},
-      delay: 5000,
-      next: 1
-    ),
-    LightNode(
-      lights: {nsYellow, ewRed},
-      delay: 2000,
-      crosswalkEnabled: true,
-      next: 2
-    ),
-    LightNode(
-      lights: {nsRed, ewGreen},
-      delay: 5000,
-      next: 3
-    ),
-    LightNode(
-      lights: {nsRed, ewYellow},
-      delay: 2000,
-      crosswalkEnabled: true,
-      next: 0
-    )
+    LightNode(lights: {nsGreen, ewRed}, delay: 5000, next: 1),
+    LightNode(lights: {nsYellow, ewRed}, delay: 2000, crosswalkEnabled: true, next: 2),
+    LightNode(lights: {nsRed, ewGreen}, delay: 5000, next: 3),
+    LightNode(lights: {nsRed, ewYellow}, delay: 2000, crosswalkEnabled: true, next: 0)
   ]
   ruralFSM = @[
-    LightNode(
-      lights: {nsGreen, ewRed},
-      delay: 5000,
-      holdUntil: some(Gpio(14)),
-      next: 1
-    ),
-    LightNode(
-      lights: {nsYellow, ewRed},
-      delay: 2000,
-      next: 2
-    ),
-    LightNode(
-      lights: {nsRed, ewGreen},
-      delay: 5000,
-      holdUntil: some(Gpio(15)),
-      next: 3
-    ),
-    LightNode(
-      lights: {nsRed, ewYellow},
-      delay: 2000,
-      next: 0
-    )
+    LightNode(lights: {nsGreen, ewRed}, delay: 5000, holdUntil: some(Gpio(14)), next: 1),
+    LightNode(lights: {nsYellow, ewRed}, delay: 2000, next: 2),
+    LightNode(lights: {nsRed, ewGreen}, delay: 5000, holdUntil: some(Gpio(15)), next: 3),
+    LightNode(lights: {nsRed, ewYellow}, delay: 2000, next: 0)
   ]
 
 proc newCrosswalk*(count: SomeUnsignedInt): FiberIterator =
