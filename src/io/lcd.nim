@@ -139,6 +139,7 @@ proc init*(this: var LCDisplay) =
   ])
 
   this.initDefaultCustomCharacters()
+  this.isInitialized = true
 
 proc clear*(this: var LCDisplay) {.inline.} =
   this.commandWrite(CLR)

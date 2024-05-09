@@ -5,9 +5,9 @@ import
   async/[fibers]
 
 const
-  UP = Gpio(11)
-  DOWN = Gpio(10)
-  ENTER = Gpio(12)
+  UP* = Gpio(11)
+  DOWN* = Gpio(10)
+  ENTER* = Gpio(12)
 
 type
   MenuEntryType* = enum
@@ -56,7 +56,7 @@ var
   currentSelection: uint
   historyStack*: seq[tuple[entry: MenuEntry, idx: uint]]
 
-  menuSuspended = false   # Don't process the menu if it's suspended
+  menuSuspended* = false   # Don't process the menu if it's suspended
 
 proc `[]`*(this: MenuEntry, idx: SomeInteger): Option[MenuEntry] =
   if this.kind != Submenu: none(MenuEntry)
@@ -89,7 +89,7 @@ proc getSubmenuSlice(menu: MenuEntry, index: uint): array[2, Option[(uint, MenuE
     else:
       result[i] = some (idx, menu.unsafeGet())
 
-proc addMenuHandler*(): FiberIterator =
+proc newMenuHandler*(): FiberIterator =
   ## Initializes the LCD and returns a new iterator for menu handling.
   
   # initialize the LCD
@@ -180,7 +180,7 @@ proc addMenuHandler*(): FiberIterator =
           if isPressed(ENTER):
             currentMenu = returnButton
             break kinds
-          
+
           LCD.clear()
           LCD[0] = "\x03\x04:" & currentMenu.label
           LCD[1] = currentMenu.display()

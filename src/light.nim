@@ -84,6 +84,8 @@ let delays =
         config.crosswalkTime.inc
       decrement:
         config.crosswalkTime.dec
+        if config.crosswalkTime < 1:
+          config.crosswalkTime = 1
       display: return $config.crosswalkTime
     return
     
