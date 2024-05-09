@@ -1,6 +1,21 @@
 import
   picostdlib/[gpio, time],
   register
+
+const
+  LCD_WIDTH = 16
+  CUSTOM_CHARS = [1, 2]
+  CUSTOM_CHAR_DATA = block:
+    # Read in all .char files at compile time
+    var res: array[CUSTOM_CHARS.len(), array[8, byte]]
+    for i, c in CUSTOM_CHARS:
+      var str = readFile("res/" & $c & ".char")
+      var buf: array[8, byte]
+      for j in 0..<8:
+        buf[j] = str[j].byte
+      res[i] = buf
+    res
+
 #### Commands ####
 
 type
@@ -82,6 +97,22 @@ proc run*(this: var LCDisplay, commands: openArray[Command]) =
   for c in commands:
     this.commandWrite(c)
 
+proc initDefaultCustomCharacters*(this: var LCDisplay) =
+  ## Initialize the default custom characters
+  for i in 0..<CUSTOM_CHARS.len():
+    let address = byte(CUSTOM_CHARS[i].shl 3)
+    this.commandWrite(SETCG(address))
+    for b in CUSTOM_CHAR_DATA[i]:
+      this.commandWrite(WRITE(b))
+
+proc initCustomCharacters*(this: var LCDisplay, data: openArray[tuple[idx: int, data: array[8, byte]]]) =
+  ## Overwrite existing custom character data
+  for (adr, dat) in data:
+    let address = byte(adr.shl 3)
+    this.commandWrite(SETCG(address))
+    for b in dat:
+      this.commandWrite(WRITE(b))
+
 proc init*(this: var LCDisplay) =
   echo "Initializing LCD..."
   this.register.init()
@@ -107,6 +138,8 @@ proc init*(this: var LCDisplay) =
     DISMODE(true, this.settings.cursor, this.settings.blinking)
   ])
 
+  this.initDefaultCustomCharacters()
+
 proc clear*(this: var LCDisplay) {.inline.} =
   this.commandWrite(CLR)
 
@@ -126,7 +159,11 @@ proc writeLine*(this: var LCDisplay, output: string, line = LCDLine.LineOne) =
     this.commandWrite(SETDDR(0x00))
   of LCDLine.LineTwo:
     this.commandWrite(SETDDR(0x40))
-  this.write(output)
+  
+  this.write(
+    # Cap the output at 16 characters
+    output[0..min(output.high, LCD_WIDTH - 1)]
+  )
 
 proc `[]=`*(this: var LCDisplay, idx: range[0..1], val: string) =
   this.writeLine(val, LCDLine(idx))

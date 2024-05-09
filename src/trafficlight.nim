@@ -4,7 +4,7 @@ import
   async/[fibers],
   csrc/[meminfo],
   io/[register, lcd, input, irq],
-  sevenseg, light
+  sevenseg, light, lcdmenu
 
 # var count: uint = 0
 # proc sevenSegInc(): FiberIterator =
@@ -15,32 +15,22 @@ import
 #       setSevenSegValue(count)
 
 proc lcdtest(): FiberIterator =
-  var lcd = LCDisplay(
-    register: ShiftRegister(
-      input: Gpio(2), serial_clk: Gpio(3), out_buffer_clk: Gpio(6)
-    ),
-    enablePin: Gpio(7),
-    settings: LCDSettings(
-      cursor: false,
-      blinking: false
-    )
-  )
-  lcd.init()
+  LCD.init()
   iterator(): FiberYield =
     while true:
       result = waitMS(1000)
-      lcd.clear()
-      lcd[0] = "Hello!"
+      LCD.clear()
+      LCD[0] = "\x01"
       yield result
       result = waitMS(1000)
-      lcd.clear()
-      lcd[1] = "World!"
+      LCD.clear()
+      LCD[0] = "\x02"
       yield result
 
 proc inputtest(): FiberIterator =
   DefaultLedPin.init()
   DefaultLedPin.setDir(Out)
-  addInput(Gpio(12))
+  listenForInput(Gpio(12))
   iterator(): FiberYield =
     while true:
       yield untilPressed(Gpio(12))
@@ -68,7 +58,7 @@ proc main() =
   ## Main function
   addFiber(sevenSegDaemon())
   addFiber(newTrafficLight())
-  # addFiber(lcdtest())
+  addFiber(lcdtest())
   addFiber(inputtest())
   # addFiber(termTest())
   addFiber(memstats())

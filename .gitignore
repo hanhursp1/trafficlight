@@ -1,1 +1,4 @@
 csource/build
+
+# Character data files (Can be built from script)
+*.char

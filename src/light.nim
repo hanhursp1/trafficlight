@@ -84,8 +84,8 @@ var cross = false
 var fsm = addr urbanFSM
 
 proc newTrafficLight*(): FiberIterator =
-  addInput(Gpio(14))
-  addInput(Gpio(15))
+  listenForInput(Gpio(14))
+  listenForInput(Gpio(15))
 
   let crosswalkButton = Gpio(13)
   let modeToggle = Gpio(10)

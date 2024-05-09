@@ -13,7 +13,7 @@ var
   activeLow: set[Gpio]
   pressed, held, released: set[Gpio]
 
-proc addInput*(pin: Gpio, isActiveLow = true) =
+proc listenForInput*(pin: Gpio, isActiveLow = true) =
   ## Set a pin to be watched for input
   pin.init()
   pin.setDir(In)
