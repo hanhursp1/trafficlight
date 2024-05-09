@@ -68,7 +68,7 @@ proc main() =
   ## Main function
   addFiber(sevenSegDaemon())
   addFiber(newTrafficLight())
-  addFiber(lcdtest())
+  # addFiber(lcdtest())
   addFiber(inputtest())
   # addFiber(termTest())
   addFiber(memstats())
@@ -78,9 +78,11 @@ proc main() =
 
 when isMainModule:
   stdioInitAll()
+  stderr = stdout
   sleep(1000)
   try:
     main()
   except Exception as e:
+    stdioInitAll()
     echo "An exception occurred: "
     echo e[]

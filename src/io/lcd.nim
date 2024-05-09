@@ -50,6 +50,7 @@ proc getInstructionNibbles*(this: Command): array[2, byte] {.inline.} =
 
 type
   LCDisplay* = object
+    isInitialized*: bool
     register*: ShiftRegister
     enablePin*: Gpio
     settings*: LCDSettings
@@ -110,10 +111,16 @@ proc clear*(this: var LCDisplay) {.inline.} =
   this.commandWrite(CLR)
 
 proc write*(this: var LCDisplay, output: string) =
+  if not this.isInitialized:
+    this.init()
+    this.isInitialized = true
   for c in output:
     this.commandWrite(WRITE(c))
 
 proc writeLine*(this: var LCDisplay, output: string, line = LCDLine.LineOne) =
+  if not this.isInitialized:
+    this.init()
+    this.isInitialized = true
   case line
   of LCDLine.LineOne:
     this.commandWrite(SETDDR(0x00))

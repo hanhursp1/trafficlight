@@ -26,6 +26,17 @@ type
       decFloat*: proc(): float
   MenuEntry* = ref MenuEntryObj
 
+var LCD* = LCDisplay(
+  register: ShiftRegister(
+    input: Gpio(2), serial_clk: Gpio(3), out_buffer_clk: Gpio(6)
+  ),
+  enablePin: Gpio(7),
+  settings: LCDSettings(
+    cursor: false,
+    blinking: false
+  )
+)
+
 var
   rootMenu: MenuEntry = MenuEntry(
     kind: Submenu,

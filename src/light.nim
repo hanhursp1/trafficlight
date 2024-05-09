@@ -114,13 +114,20 @@ proc newTrafficLight*(): FiberIterator =
 
   iterator(): FiberYield =
     while true:
+      # A bitset is just a number, so this works
       sr.output = cast[byte](fsm[][state].lights)
+      # Wait a bit
       yield waitMS(fsm[][state].delay)
+
+      # If the crosswalk is enabled and we need to cross,
+      # then wait until the cross is finished
       if fsm[][state].crosswalkEnabled and cross:
         sr.output = cast[byte]({nsRed, ewRed})
         yield waitFiber(addFiber(newCrosswalk(15)))
         cross = false
+      # If we need to hold for some road triggers, then wait
       if fsm[][state].holdUntil.isSome():
         let pin = fsm[][state].holdUntil.unsafeGet()
-        yield untilHeld(pin)
+        yield untilHeld(pin) or waitCallback(proc(): bool = fsm == addr urbanFSM)
+      # Next state
       state = fsm[][state].next
