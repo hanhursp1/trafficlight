@@ -56,6 +56,8 @@ var
   currentSelection: uint
   historyStack*: seq[tuple[entry: MenuEntry, idx: uint]]
 
+  menuSuspended = false   # Don't process the menu if it's suspended
+
 proc `[]`*(this: MenuEntry, idx: SomeInteger): Option[MenuEntry] =
   if this.kind != Submenu: none(MenuEntry)
   # Cast to the same type as idx
@@ -65,7 +67,7 @@ proc `[]`*(this: MenuEntry, idx: SomeInteger): Option[MenuEntry] =
 proc addMainMenu*(menu: MenuEntry) =
   rootMenu.submenus.add(menu)
 
-proc getSubmenuSlice(menu: MenuEntry, index: uint, isMainMenu = false): array[2, Option[(uint, MenuEntry)]] =
+proc getSubmenuSlice(menu: MenuEntry, index: uint): array[2, Option[(uint, MenuEntry)]] =
   assert menu.kind == Submenu, "`menu` must be a submenu in order to get a slice."
   # This was kinda hacked together from an earlier function
   var tempResultMenus: array[2, Option[MenuEntry]]
@@ -80,12 +82,6 @@ proc getSubmenuSlice(menu: MenuEntry, index: uint, isMainMenu = false): array[2,
     tempResultMenus[1] = menu[index]
     tempResultIndex[0] = index - 1
     tempResultIndex[1] = index
-  if not isMainMenu:
-    # If the menu is not the main menu, we can add a return button at the bottom
-    if tempResultMenus[0].isNone():
-      tempResultMenus[0] = some returnButton
-    elif tempResultMenus[0].isSome() and result[1].isNone():
-      tempResultMenus[1] = some returnButton
   
   for i, (idx, menu) in zip(tempResultIndex, tempResultMenus):
     if menu.isNone():
@@ -116,78 +112,79 @@ proc addMenuHandler*(): FiberIterator =
         historyStack = @[]
         currentSelection = 0
 
-      # Switch based on the type of the current menu  
-      case currentMenu.kind
-      of Return:
-        if historyStack.len() == 0:
-          currentMenu = rootMenu
-          currentSelection = 0
-        else:
-          (currentMenu, currentSelection) = historyStack.pop()
-      of Submenu:
-        # Draw a submenu
-        # This is probably the most complicated menu type
+      # Switch based on the type of the current menu 
+      block kinds: 
+        case currentMenu.kind
+        of Return:
+          if historyStack.len() == 0:
+            currentMenu = rootMenu
+            currentSelection = 0
+          else:
+            (currentMenu, currentSelection) = historyStack.pop()
+          yield next()
+          break kinds
+        of Submenu:
+          # Draw a submenu
+          # This is probably the most complicated menu type
 
-        if isPressed(UP): currentSelection.inc
-        if isPressed(DOWN): currentSelection.dec
+          if isPressed(UP): currentSelection.inc
+          if isPressed(DOWN):
+            currentSelection.dec
 
-        # Bind the selection between 0 and the current menus length
-        # If we're not in the main menu, there will be a return option that is
-        # technically not a menu entry.
-        if currentSelection >= currentMenu.submenus.len().uint:
-          currentSelection =
-            if currentMenu == rootMenu:
-              currentMenu.submenus.len().uint - 1
-            else:
-              currentMenu.submenus.len().uint
+          currentSelection = currentSelection mod currentMenu.submenus.len().uint
 
-        if isPressed(ENTER):
-          # Push the current menu and current selection onto the history stack
-          historyStack.add((currentMenu, currentSelection))
-          var next = currentMenu[currentSelection]
-          # If the next index is out of bounds, then return to the previous menu.
-          # It's a hack, but it should guard some edge cases as well.
-          if next.isNone():
-            next = some returnButton
-          currentMenu = next.unsafeGet()
-          currentSelection = 0
-          continue
-        
-        # Get which menus to display
-        let display = getSubmenuSlice(currentMenu, currentSelection, currentMenu == rootMenu)
-        LCD.clear()
+          if isPressed(ENTER):
+            let next = currentMenu[currentSelection]
+            # If the next index is out of bounds, then return to the previous menu.
+            # It's a hack, but it should guard some edge cases as well.
+            if next.isNone():
+              echo "Something went wrong"
+              currentMenu = nil
+              break kinds
+            if next.unsafeGet().kind != Return:
+              # Push the current menu and current selection onto the history stack
+              historyStack.add((currentMenu, currentSelection))
+            currentMenu = next.unsafeGet()
+            currentSelection = 0
+            yield next()
+            break kinds
+          
+          # Get which menus to display
+          let display = getSubmenuSlice(currentMenu, currentSelection)
+          LCD.clear()
 
-        for i, d in display:
-          if d.isSome():
-            let (idx, menu) = d.unsafeGet()
-            let cursor = if idx == currentSelection: "\x7E" else: " "
-            if menu.kind == Toggle:
-              let checkbox = if menu.getBool(): '\x02' else: '\x01'
-              LCD[i] = fmt"""{cursor}{(idx+1):>02}:{checkbox}{menu.label}"""
-            else:
-              LCD[i] = fmt"""{cursor}{(idx+1):>02}:{menu.label}"""
-      of Toggle:
-        # Toggle the button then return
-        currentMenu.toggleBool()
-        currentMenu = returnButton
-        continue
-      of FunctionCall:
-        # Call the callback then return
-        currentMenu.callback()
-        currentMenu = returnButton
-        continue
-      of IncDec:
-        if isPressed(UP):
-          currentMenu.increment()
-        if isPressed(DOWN):
-          currentMenu.decrement()
-        if isPressed(ENTER):
+          for i, d in display:
+            if d.isSome():
+              let (idx, menu) = d.unsafeGet()
+              let cursor = if idx == currentSelection: "\x7E" else: " "
+              if menu.kind == Toggle:
+                let checkbox = if menu.getBool(): '\x02' else: '\x01'
+                LCD[i] = fmt"""{cursor}{(idx+1)}:{checkbox}{menu.label}"""
+              else:
+                LCD[i] = fmt"""{cursor}{(idx+1)}:{menu.label}"""
+        of Toggle:
+          # Toggle the button then return
+          currentMenu.toggleBool()
           currentMenu = returnButton
-          continue
-
-        LCD[0] = "\x03\x04:" & currentMenu.label
-        LCD[1] = currentMenu.display()
-      yield untilAnyPressed({UP, DOWN, ENTER})
+          break kinds
+        of FunctionCall:
+          # Call the callback then return
+          currentMenu.callback()
+          currentMenu = returnButton
+          break kinds
+        of IncDec:
+          if isPressed(UP):
+            currentMenu.increment()
+          if isPressed(DOWN):
+            currentMenu.decrement()
+          if isPressed(ENTER):
+            currentMenu = returnButton
+            break kinds
+          
+          LCD.clear()
+          LCD[0] = "\x03\x04:" & currentMenu.label
+          LCD[1] = currentMenu.display()
+        yield untilAnyPressed({UP, DOWN, ENTER}) and waitCallback(proc(): bool = not menuSuspended)
 
 
 #### MACROS
@@ -241,9 +238,16 @@ proc toggleImpl(name: NimNode, body: NimNode): NimNode =
       toggleBool: proc() = `toggle`
     )
 
+proc retImpl(): NimNode =
+  result = quote do:
+    MenuEntry(
+      label: "Back",
+      kind: Return
+    )
 
 proc submenuImpl(name: NimNode, body: NimNode): NimNode =
   var subnodes: seq[NimNode]    # Submenu nodes
+  var hasReturn = false
 
   # iterate over every node in the body.
   # if it's a command, and it matches one of the
@@ -251,6 +255,9 @@ proc submenuImpl(name: NimNode, body: NimNode): NimNode =
     if i.kind != nnkCommand:
       if i.kind == nnkIdent:
         subnodes.add(i)   # `i` is likely a variable
+      elif i.kind == nnkReturnStmt:
+        subnodes.add(retImpl())   # `i` is a return statement.
+        hasReturn = true
       continue
     case i[0].strVal
     of "incdec":
@@ -274,6 +281,9 @@ proc submenuImpl(name: NimNode, body: NimNode): NimNode =
       kind: Submenu,
       submenus: @`arr`
     )
+  
+  if not hasReturn:
+    warning "A `return` entry is recommended", body
 
 macro submenu*(name: string, body: untyped): MenuEntry =
   submenuImpl(name, body)

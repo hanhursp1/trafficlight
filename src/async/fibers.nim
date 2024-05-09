@@ -106,6 +106,19 @@ proc `or`*(l, r: FiberYield): FiberYieldOr =
   result.yieldA = l
   result.yieldB = r
 
+type
+  FiberYieldAndObj = object of FiberYield
+    yieldA, yieldB: FiberYield
+  FiberYieldAnd* = ref FiberYieldAndObj
+
+method ready*(this: FiberYieldAnd): bool =
+  this.yieldA.ready() and this.yieldB.ready()
+
+proc `and`*(l, r: FiberYield): FiberYieldAnd =
+  result.new()
+  result.yieldA = l
+  result.yieldB = r
+
 #### Fiber Scheduler
 ## Really simple, just iterate over all Fibers and check if they're ready or finished
 
