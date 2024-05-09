@@ -53,8 +53,8 @@ var
     submenus: @[]
   )
   currentMenu: MenuEntry
-  currentSelection: uint
-  historyStack*: seq[tuple[entry: MenuEntry, idx: uint]]
+  currentSelection: int
+  historyStack*: seq[tuple[entry: MenuEntry, idx: int]]
 
   menuSuspended* = false   # Don't process the menu if it's suspended
 
@@ -67,11 +67,11 @@ proc `[]`*(this: MenuEntry, idx: SomeInteger): Option[MenuEntry] =
 proc addMainMenu*(menu: MenuEntry) =
   rootMenu.submenus.add(menu)
 
-proc getSubmenuSlice(menu: MenuEntry, index: uint): array[2, Option[(uint, MenuEntry)]] =
+proc getSubmenuSlice(menu: MenuEntry, index: int): array[2, Option[(int, MenuEntry)]] =
   assert menu.kind == Submenu, "`menu` must be a submenu in order to get a slice."
   # This was kinda hacked together from an earlier function
   var tempResultMenus: array[2, Option[MenuEntry]]
-  var tempResultIndex: array[2, uint]
+  var tempResultIndex: array[2, int]
   if (index and 1) == 0:
     tempResultMenus[0] = menu[index]
     tempResultMenus[1] = menu[index + 1]
@@ -85,7 +85,7 @@ proc getSubmenuSlice(menu: MenuEntry, index: uint): array[2, Option[(uint, MenuE
   
   for i, (idx, menu) in zip(tempResultIndex, tempResultMenus):
     if menu.isNone():
-      result[i] = none (uint, MenuEntry)
+      result[i] = none (int, MenuEntry)
     else:
       result[i] = some (idx, menu.unsafeGet())
 
@@ -128,10 +128,13 @@ proc newMenuHandler*(): FiberIterator =
           # This is probably the most complicated menu type
 
           if isPressed(UP): currentSelection.inc
-          if isPressed(DOWN):
-            currentSelection.dec
+          if isPressed(DOWN): currentSelection.dec
 
-          currentSelection = currentSelection mod currentMenu.submenus.len().uint
+          # Clamp selection to within range of submenus
+          if currentSelection > currentMenu.submenus.high:
+            currentSelection = currentMenu.submenus.low
+          elif currentSelection < currentMenu.submenus.low:
+            currentSelection = currentMenu.submenus.high
 
           if isPressed(ENTER):
             let next = currentMenu[currentSelection]
