@@ -1,5 +1,5 @@
 import
-  std/[options, sequtils, strformat, macros],
+  std/[options, sequtils, strformat, macros, strutils],
   picostdlib/[gpio],
   io/[lcd, register, input],
   async/[fibers]
@@ -160,11 +160,11 @@ proc newMenuHandler*(): FiberIterator =
             if d.isSome():
               let (idx, menu) = d.unsafeGet()
               let cursor = if idx == currentSelection: "\x7E" else: " "
+              var finalString = (fmt"""{cursor}{(idx+1)}:{menu.label}""").alignLeft(16)
               if menu.kind == Toggle:
                 let checkbox = if menu.getBool(): '\x02' else: '\x01'
-                LCD[i] = fmt"""{cursor}{(idx+1)}:{checkbox}{menu.label}"""
-              else:
-                LCD[i] = fmt"""{cursor}{(idx+1)}:{menu.label}"""
+                finalString[15] = checkbox
+              LCD[i] = finalString
         of Toggle:
           # Toggle the button then return
           currentMenu.toggleBool()
