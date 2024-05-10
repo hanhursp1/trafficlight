@@ -1,9 +1,11 @@
 from PIL import Image
 import os.path
 
+current_dir : str = os.path.dirname(os.path.realpath(__file__))
+
 # Iterate from 0 to 8
 for i in range(8):
-  path: str = "res/" + str(i)
+  path : str = current_dir + "/" + str(i)
   # Check if the png file exists. If not, then move on.
   if not os.path.isfile(path + ".png"):
     continue

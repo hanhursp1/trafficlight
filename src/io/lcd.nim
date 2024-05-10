@@ -1,11 +1,15 @@
 import
+  std/[macros],
   picostdlib/[gpio, time],
   register
 
 const
   LCD_WIDTH = 16    ## Width of the LCD
   CUSTOM_CHARS = [1, 2, 3, 4]     ## Custom character codes
-  CUSTOM_CHAR_DATA = block:       ## Data of custom characters
+  CUSTOM_CHAR_DATA = block:       ## Data of custom characters    
+    # Runs the script to compile character files
+    echo staticExec("python " & getProjectPath() & "/../res/compilechars.py")
+
     # Reads all character files defined by `CUSTOM_CHARS` from "res" at
     # compile time and embeds them into the file.
     var res: array[CUSTOM_CHARS.len(), array[8, byte]]  # Result array
@@ -13,7 +17,8 @@ const
       var str = readFile("res/" & $c & ".char")         # Read the whole file
       for j in 0..<8:
         res[i][j] = str[j].byte         # Store each byte in the data array
-    res                                 # Return the result
+    # Return the result
+    res
 
 #### Commands ####
 
