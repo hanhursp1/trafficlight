@@ -12,6 +12,12 @@ const
 type
   MenuEntryType* = enum
     Submenu, FunctionCall, Toggle, IncDec, Return
+  
+  ## This is an example of an Algabraic Data Type (ADT), also known as a tagged union.
+  ## All the branches under the `case` statement exist as a C union.
+  ## Nim will enforce these tags at runtime unter the debug and release modes, though
+  ## checks can be disabled altogether under the danger mode.
+  
   MenuEntryObj = object
     ## Base object for menu entries
     label*: string    # Text to display when the menu entry is shown
