@@ -154,16 +154,25 @@ proc newMenuHandler*(): FiberIterator =
           
           # Get which menus to display
           let display = getSubmenuSlice(currentMenu, currentSelection)
+
+
           LCD.clear()
 
+          # For both menu entries, check if it exists. If so, draw it.
           for i, d in display:
             if d.isSome():
+              # We know `d` exists, otherwise we wouldn't be doing this. 
+              # So it's faster to do an `unsafeGet()`
               let (idx, menu) = d.unsafeGet()
+              # Cursor is character 0x7E on the LCD
               let cursor = if idx == currentSelection: "\x7E" else: " "
+              # Construct the string
               var finalString = (fmt"""{cursor}{(idx+1)}:{menu.label}""").alignLeft(16)
+              # If the menu is a toggle, then get the value of it and add a checkbox
               if menu.kind == Toggle:
                 let checkbox = if menu.getBool(): '\x02' else: '\x01'
                 finalString[15] = checkbox
+              # Output on the desired row.
               LCD[i] = finalString
         of Toggle:
           # Toggle the button then return
@@ -176,6 +185,7 @@ proc newMenuHandler*(): FiberIterator =
           currentMenu = returnButton
           break kinds
         of IncDec:
+          # Either increment, decrement, or return
           if isPressed(UP):
             currentMenu.increment()
           if isPressed(DOWN):
@@ -183,7 +193,8 @@ proc newMenuHandler*(): FiberIterator =
           if isPressed(ENTER):
             currentMenu = returnButton
             break kinds
-
+          
+          # Draw our info to the LCD
           LCD.clear()
           LCD[0] = "\x03\x04:" & currentMenu.label
           LCD[1] = currentMenu.display()
@@ -191,6 +202,12 @@ proc newMenuHandler*(): FiberIterator =
 
 
 #### MACROS
+## Nim's macro system allows for near-complete control of the AST.
+## In this section, I have implemented a domain-specific language (DSL)
+## for adding menu entries.
+## 
+## `runnableExamples` blocks are not actual code, but are specific
+## comments that only show up when creating doccumentation
 
 proc incdecImpl(name: NimNode, body: NimNode): NimNode =
   # Find each of our callbacks
@@ -242,6 +259,7 @@ proc toggleImpl(name: NimNode, body: NimNode): NimNode =
     )
 
 proc retImpl(): NimNode =
+  ## Return a return entry
   result = quote do:
     MenuEntry(
       label: "Back",
@@ -289,13 +307,57 @@ proc submenuImpl(name: NimNode, body: NimNode): NimNode =
     warning "A `return` entry is recommended", body
 
 macro submenu*(name: string, body: untyped): MenuEntry =
+  ## Create a submenu consisting of other menu entries
+  runnableExamples:
+    let sub = submenu "Options":
+      incdec "Brightness":
+        increment:
+          brightness += 1
+        decrement:
+          brightness -= 1
+        display:
+          $brightness
+      callback "Show log":
+        showLog()
+
   submenuImpl(name, body)
 
 macro incdec*(name: string, body: untyped): MenuEntry =
+  ## Create an increment-decrement menu entry
+  runnableExamples:
+    # Create an increment-decrement entry that controls
+    # a `brightness` variable
+    let lightBrightness = incdec "Brightness":
+      increment:
+        brightness += 1
+      decrement:
+        brightness -= 1
+      display:
+        $brightness
+
   incdecImpl(name, body)
 
 macro callback*(name: string, body: untyped): MenuEntry =
+  ## Create a callback menu entry
+  runnableExamples:
+    # Create a logging menu entry that outputs
+    # the log to serial.
+    let showLog = callback "Show log":
+      echo "Some important data..."
+      doLogStuff()
+    
   callbackImpl(name, body)
 
 macro toggle*(name: string, body: untyped): MenuEntry =
+  ## Create a toggle menu entry
+  runnableExamples:
+    var lightIsOn = false
+
+    let lightToggle = toggle "Toggle light":
+      toggle:
+        lightIsOn = not lightIsOn
+        outputValue(lightIsOn)
+      get:
+        return lightIsOn
+
   toggleImpl(name, body)

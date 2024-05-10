@@ -94,6 +94,8 @@ addMainMenu(ruralMenu)
 addMainMenu(delays)
 
 proc newCrosswalk*(count: SomeUnsignedInt): FiberIterator =
+  ## Create a crosswalk coroutine, which will count
+  ## the 7-segment display down from `count`
   iterator(): FiberYield =
     for i in countdown(count, 0):
       setSevenSegValue(i.uint)
@@ -102,6 +104,7 @@ proc newCrosswalk*(count: SomeUnsignedInt): FiberIterator =
 var walk = false
 
 proc newTrafficLight*(): FiberIterator =
+  ## Create the traffic light coroutine.
   listenForInput(EW_HOLD)
   listenForInput(NS_HOLD)
 

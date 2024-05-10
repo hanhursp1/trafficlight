@@ -3,18 +3,17 @@ import
   register
 
 const
-  LCD_WIDTH = 16
-  CUSTOM_CHARS = [1, 2, 3, 4]
-  CUSTOM_CHAR_DATA = block:
-    # Read in all .char files at compile time
-    var res: array[CUSTOM_CHARS.len(), array[8, byte]]
+  LCD_WIDTH = 16    ## Width of the LCD
+  CUSTOM_CHARS = [1, 2, 3, 4]     ## Custom character codes
+  CUSTOM_CHAR_DATA = block:       ## Data of custom characters
+    # Reads all character files defined by `CUSTOM_CHARS` from "res" at
+    # compile time and embeds them into the file.
+    var res: array[CUSTOM_CHARS.len(), array[8, byte]]  # Result array
     for i, c in CUSTOM_CHARS:
-      var str = readFile("res/" & $c & ".char")
-      var buf: array[8, byte]
+      var str = readFile("res/" & $c & ".char")         # Read the whole file
       for j in 0..<8:
-        buf[j] = str[j].byte
-      res[i] = buf
-    res
+        res[i][j] = str[j].byte         # Store each byte in the data array
+    res                                 # Return the result
 
 #### Commands ####
 
@@ -75,6 +74,7 @@ type
     LineOne, LineTwo
 
 proc nibbleWrite*(this: var LCDisplay, data: byte, control: byte) =
+  ## Writes the lower nibble of `data` to `this`, along with `control`.
   let cmd = (data and 0x0f) or (control.shl 4)
   this.register.output = cmd
   sleepMicroseconds(2)
@@ -83,6 +83,7 @@ proc nibbleWrite*(this: var LCDisplay, data: byte, control: byte) =
   this.enablePin.put(Low)
 
 proc commandWrite*(this: var LCDisplay, command: Command) =
+  ## Writes both nibbles of a command to `this`
   let control = command.getControl()
   let instr = command.getInstructionNibbles()
   this.nibbleWrite(instr[0], control)
@@ -94,6 +95,7 @@ proc commandWrite*(this: var LCDisplay, command: Command) =
     sleepMicroseconds(50)
 
 proc run*(this: var LCDisplay, commands: openArray[Command]) =
+  ## Runs an array of commands
   for c in commands:
     this.commandWrite(c)
 
@@ -114,6 +116,7 @@ proc initCustomCharacters*(this: var LCDisplay, data: openArray[tuple[idx: int, 
       this.commandWrite(WRITE(b))
 
 proc init*(this: var LCDisplay) =
+  ## Initializes the LCD
   echo "Initializing LCD..."
   this.register.init()
   this.enablePin.init()
@@ -137,14 +140,19 @@ proc init*(this: var LCDisplay) =
     CLR,
     DISMODE(true, this.settings.cursor, this.settings.blinking)
   ])
-
+  
+  # Write custom character data
   this.initDefaultCustomCharacters()
+  # LCD has finished initializing
   this.isInitialized = true
 
 proc clear*(this: var LCDisplay) {.inline.} =
+  ## Clear the display
   this.commandWrite(CLR)
 
 proc write*(this: var LCDisplay, output: string) =
+  ## Write the string `output` to the display, starting from the
+  ## current memory location.
   if not this.isInitialized:
     this.init()
     this.isInitialized = true
@@ -152,6 +160,8 @@ proc write*(this: var LCDisplay, output: string) =
     this.commandWrite(WRITE(c))
 
 proc writeLine*(this: var LCDisplay, output: string, line = LCDLine.LineOne) =
+  ## Write the string `output` to the display, starting from the
+  ## beginning of one of the lines.
   if not this.isInitialized:
     this.init()
     this.isInitialized = true
@@ -167,4 +177,11 @@ proc writeLine*(this: var LCDisplay, output: string, line = LCDLine.LineOne) =
   )
 
 proc `[]=`*(this: var LCDisplay, idx: range[0..1], val: string) =
+  ## More convenient form of `writeLine` using the array access operator.
+  runnableExamples:
+    # Write a string to the first line of `LCD`
+    LCD[0] = "Hello world!"
+    # Format and write a string to the second line of `LCD`
+    LCD[1] = fmt"a + b = {a + b}"
+
   this.writeLine(val, LCDLine(idx))

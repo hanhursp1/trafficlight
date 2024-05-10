@@ -1,5 +1,4 @@
 import
-  std/[sequtils],
   picostdlib/[gpio],
   ../async/fibers
 
@@ -83,13 +82,16 @@ method ready*(this: FiberYieldUntilPressedAny): bool =
   (this.pins * pressed) != {}
 
 proc untilPressed*(pin: Gpio): FiberYieldUntilPressed =
+  ## Yield until the same frame that `pin` gets pressed
   result.new()
   result.pin = pin
 
 proc untilHeld*(pin: Gpio): FiberYieldUntilHold =
+  ## Yield until `pin` has been held
   result.new()
   result.pin = pin
 
 proc untilAnyPressed*(pins: set[Gpio]): FiberYieldUntilPressedAny =
+  ## Yield until any pin in `pins` has been pressed
   result.new()
   result.pins = pins
