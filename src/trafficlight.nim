@@ -37,13 +37,11 @@ proc createNewDebugInfo(): FiberIterator =
       yield waitMS(200) or untilPressed(ENTER)
       # If ENTER was pressed, unsuspend and return
       if isPressed(ENTER):
-        echo "Unsuspending..."
-        menuSuspended = false
+        suspendMenu(false)
         return
 
 let debugMenu = callback "Debug Info":
-  menuSuspended = true
-  echo "Suspending debug menu..."
+  suspendMenu(true)
   addFiber(createNewDebugInfo())
 
 addMainMenu(debugMenu)

@@ -37,8 +37,12 @@ type
       discard
   MenuEntry* = ref MenuEntryObj
 
-## Global return button to save some memory allocation every time we draw the menu
-let returnButton = MenuEntry(label: "Back", kind: Return)
+## Global return button to save heap. This is a `let` because it needs to
+## be initialized at runtime.
+let RETURN_BUTTON* = MenuEntry(label: "Back", kind: Return)
+## Increment the reference count so this button always has at least one ref,
+## just in case the global variable somehow goes out of scope.
+RETURN_BUTTON.GC_ref()
 
 ## Global LCD
 var LCD* = LCDisplay(
@@ -62,7 +66,17 @@ var
   currentSelection: int
   historyStack*: seq[tuple[entry: MenuEntry, idx: int]]
 
-  menuSuspended* = false   # Don't process the menu if it's suspended
+  menuSuspended = false   # Don't process the menu if it's suspended
+
+proc suspendMenu*(val: bool) =
+  if val:
+    echo "Suspending menu..."
+  else:
+    echo "Unsuspending menu..."
+  menuSuspended = val
+
+proc isMenuSuspended*(): bool = menuSuspended
+
 
 proc `[]`*(this: MenuEntry, idx: SomeInteger): Option[MenuEntry] =
   if this.kind != Submenu: none(MenuEntry)
@@ -183,12 +197,12 @@ proc newMenuHandler*(): FiberIterator =
         of Toggle:
           # Toggle the button then return
           currentMenu.toggleBool()
-          currentMenu = returnButton
+          currentMenu = RETURN_BUTTON
           break kinds
         of FunctionCall:
           # Call the callback then return
           currentMenu.callback()
-          currentMenu = returnButton
+          currentMenu = RETURN_BUTTON
           break kinds
         of IncDec:
           # Either increment, decrement, or return
@@ -197,7 +211,7 @@ proc newMenuHandler*(): FiberIterator =
           if isPressed(DOWN):
             currentMenu.decrement()
           if isPressed(ENTER):
-            currentMenu = returnButton
+            currentMenu = RETURN_BUTTON
             break kinds
           
           # Draw our info to the LCD
@@ -267,10 +281,7 @@ proc toggleImpl(name: NimNode, body: NimNode): NimNode =
 proc retImpl(): NimNode =
   ## Return a return entry
   result = quote do:
-    MenuEntry(
-      label: "Back",
-      kind: Return
-    )
+    RETURN_BUTTON
 
 proc submenuImpl(name: NimNode, body: NimNode): NimNode =
   var subnodes: seq[NimNode]    # Submenu nodes

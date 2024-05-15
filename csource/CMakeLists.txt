@@ -10,6 +10,7 @@ include(pico_sdk_import.cmake)
 
 project(trafficlight)
 # initialize the Raspberry Pi Pico SDK
+add_compile_options(-fpermissive)
 pico_sdk_init()
 
 set(Imports imports.cmake)
